@@ -1,0 +1,6 @@
+### IntelliJ PyCharm ###
+.idea
+*.iml
+*.iws
+*.ipr
+
