@@ -44,14 +44,17 @@ class Net(nn.Module):
         x = F.max_pool2d(F.relu(self.conv1(x)), (2, 2))
         # If the size is a square you can only specify a single number
         x = F.max_pool2d(F.relu(self.conv2(x)), 2)
+        # -1 代表该位置由其他位置来推断
         x = x.view(-1, self.num_flat_features(x))
         x = F.relu(self.fc1(x))
         x = F.relu(self.fc2(x))
         x = self.fc3(x)
         return x
 
+    # 使用num_flat_features函数计算张量x的总特征量（把每个数字都看出是一个特征，即特征总量），比如x是4*2*2的张量，那么它的特征总量就是16
     def num_flat_features(self, x):
         size = x.size()[1:]  # all dimensions except the batch dimension
+        # 这里为什么要使用[1:], 是因为pytorch只接受批输入，也就是说一次性输入好几张图片，那么输入数据张量的维度自然上升到了4维。【1:】让我们把注意力放在后3维上面
         num_features = 1
         for s in size:
             num_features *= s
@@ -87,4 +90,59 @@ out.backward(torch.randn(1, 10))
 # Implements forward and backward definitions of an autograd operation. Every Tensor operation, creates at least a
 # single Function node, that connects to functions that created a Tensor and encodes its history.
 
+"""
+在此，我们完成了：
 
+1.定义一个神经网络
+
+2.处理输入以及调用反向传播
+
+还剩下：
+
+1.计算损失值
+
+2.更新网络中的权重
+"""
+#
+# 损失函数
+#
+# 一个损失函数需要一对输入：模型输出和目标，然后计算一个值来评估输出距离目标有多远。
+#
+# 有一些不同的损失函数在 nn 包中。一个简单的损失函数就是 nn.MSELoss ，这计算了均方误差。
+
+output = net(input)
+target = torch.randn(10)  # a dummy target, for example
+target = target.view(1, -1)  # make it the same shape as output
+criterion = nn.MSELoss()
+
+loss = criterion(output, target)
+print(loss)
+
+# 现在，如果你跟随损失到反向传播路径，可以使用它的 .grad_fn 属性，你将会看到一个这样的计算图：
+#
+# input -> conv2d -> relu -> maxpool2d -> conv2d -> relu -> maxpool2d
+#       -> view -> linear -> relu -> linear -> relu -> linear
+#       -> MSELoss
+#       -> loss
+
+# 所以，当我们调用 loss.backward()，整个图都会微分，而且所有的在图中的requires_grad=True 的张量将会让他们的 grad 张量累计梯度。
+
+print(loss.grad_fn)  # MSELoss
+print(loss.grad_fn.next_functions[0][0])  # Linear
+print(loss.grad_fn.next_functions[0][0].next_functions[0][0])  # ReLU
+#
+# 反向传播
+#
+# 为了实现反向传播损失，我们所有需要做的事情仅仅是使用 loss.backward()。你需要清空现存的梯度，要不然帝都将会和现存的梯度累计到一起。
+#
+# 现在我们调用 loss.backward() ，然后看一下 con1 的偏置项在反向传播之前和之后的变化。
+
+net.zero_grad()     # zeroes the gradient buffers of all parameters
+
+print('conv1.bias.grad before backward')
+print(net.conv1.bias.grad)
+
+loss.backward()
+
+print('conv1.bias.grad after backward')
+print(net.conv1.bias.grad)
