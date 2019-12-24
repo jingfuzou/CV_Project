@@ -42,10 +42,11 @@ class VGG16(torch.nn.Module):
         self.pool5 = torch.nn.MaxPool2d(2, stride=2, ceil_mode=True) # 1/32
 
         # 全连接层
-        self.fc6 = torch.nn.Linear(512*7*7, 4096)
-        self.relu6 = torch.nn.ReLU(inplace=True)
-        self.fc7 = torch.nn.Linear(4096, 4096)
-        self.relu7 = torch.nn.ReLU(inplace=True)
+        # self.fc6 = torch.nn.Linear(512*7*7, 4096)
+        # self.relu6 = torch.nn.ReLU(inplace=True)
+        # self.fc7 = torch.nn.Linear(4096, 4096)
+        # self.relu7 = torch.nn.ReLU(inplace=True)
+        self.fc6
 
     # 使用定义的VGG16， 网络执行的过程
     def forward(self, x):
@@ -72,4 +73,12 @@ class VGG16(torch.nn.Module):
         h = self.relu5_2(self.conv5_2(h))
         h = self.relu5_3(self.conv5_3(h))
         h = self.pool5(h)
+
+        h = self.relu6(self.fc6(h))
+        h = self.drop6()
+
+        h = self.relu7(self.fc7(h))
+        h = self.drop7()
+
+        h = self.score(h)
 
